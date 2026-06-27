@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Nivra — Real-time UPI Fraud Risk Engine</title>
+<meta name="description" content="A working prototype of a real-time fraud risk engine for UPI payments, with a consumer-facing app and a fraud ops console." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+
+<div class="app-shell">
+
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="22" height="22">
+          <circle cx="12" cy="12" r="9.5" fill="none" stroke="currentColor" stroke-width="1.6"/>
+          <circle cx="12" cy="12" r="3.2" fill="currentColor"/>
+        </svg>
+      </span>
+      <span class="brand-name">Nivra</span>
+      <span class="brand-tag">risk engine</span>
+    </div>
+
+    <nav class="view-switch" role="tablist" aria-label="Demo views">
+      <button class="switch-btn is-active" data-view="pay" role="tab" aria-selected="true" id="tab-pay">
+        Pay app
+      </button>
+      <button class="switch-btn" data-view="ops" role="tab" aria-selected="false" id="tab-ops">
+        Risk console
+      </button>
+      <span class="switch-thumb" aria-hidden="true"></span>
+    </nav>
+  </header>
+
+  <main>
+
+    <!-- ============ PAY VIEW ============ -->
+    <section id="view-pay" class="view is-active" role="tabpanel" aria-labelledby="tab-pay">
+
+      <div class="pay-layout">
+
+        <div class="pay-intro">
+          <p class="eyebrow">Consumer side</p>
+          <h1>What the user sees</h1>
+          <p class="lede">
+            A working UPI-style payment flow. Every transaction you send here is scored by the same
+            risk engine running underneath the console on the right. Try paying a saved contact, then
+            try the two unfamiliar payees to see the engine push back.
+          </p>
+          <ul class="hint-list">
+            <li><span class="dot dot-safe"></span> Saved contacts clear instantly, low friction.</li>
+            <li><span class="dot dot-warn"></span> Unfamiliar payees trigger a step-up check.</li>
+            <li><span class="dot dot-risk"></span> Known scam patterns get held for review.</li>
+          </ul>
+        </div>
+
+        <div class="phone-wrap">
+          <div class="phone-frame">
+            <div class="phone-notch"></div>
+            <div class="phone-screen">
+
+              <div class="ph-statusbar">
+                <span id="ph-clock">9:41</span>
+                <span class="ph-status-icons">●●●  ▮▮▮  ⌁</span>
+              </div>
+
+              <div class="ph-appbar">
+                <span class="ph-app-name">Nivra Pay</span>
+                <span class="ph-avatar">YOU</span>
+              </div>
+
+              <div class="ph-balance">
+                <span class="ph-balance-label">Available balance</span>
+                <span class="ph-balance-amt">₹48,210</span>
+              </div>
+
+              <div class="ph-section">
+                <span class="ph-section-title">Pay to</span>
+                <div class="payee-grid" id="payee-grid"><!-- injected --></div>
+              </div>
+
+              <div class="ph-section">
+                <span class="ph-section-title">Amount</span>
+                <div class="amount-row">
+                  <span class="rupee">₹</span>
+                  <input type="text" inputmode="numeric" id="amount-input" placeholder="0" maxlength="7" />
+                </div>
+                <div class="amount-chips" id="amount-chips"><!-- injected --></div>
+              </div>
+
+              <button class="pay-btn" id="pay-btn" disabled>Select a payee</button>
+
+              <div class="ph-section recent-section">
+                <span class="ph-section-title">Recent activity</span>
+                <div id="recent-list" class="recent-list"><!-- injected --></div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Risk resolution overlay, anchored to the phone -->
+          <div class="risk-overlay" id="risk-overlay" aria-live="polite">
+            <div class="risk-card">
+              <div class="risk-stage" id="risk-stage-scanning">
+                <div class="gauge" id="gauge">
+                  <svg viewBox="0 0 200 200" width="180" height="180">
+                    <circle class="gauge-track" cx="100" cy="100" r="82"/>
+                    <circle class="gauge-arc gauge-arc-safe" cx="100" cy="100" r="82"/>
+                    <circle class="gauge-arc gauge-arc-warn" cx="100" cy="100" r="82"/>
+                    <circle class="gauge-arc gauge-arc-risk" cx="100" cy="100" r="82"/>
+                    <g id="gauge-needle" class="gauge-needle">
+                      <line x1="100" y1="100" x2="100" y2="28"/>
+                      <circle cx="100" cy="100" r="5"/>
+                    </g>
+                  </svg>
+                  <div class="gauge-readout">
+                    <span class="gauge-score" id="gauge-score">--</span>
+                    <span class="gauge-label">risk score</span>
+                  </div>
+                </div>
+                <p class="risk-status-text" id="risk-status-text">Scanning transaction…</p>
+              </div>
+
+              <div class="risk-stage risk-result" id="risk-stage-result">
+                <span class="result-badge" id="result-badge">Approved</span>
+                <p class="result-headline" id="result-headline">This payment cleared instantly.</p>
+                <ul class="reason-list" id="reason-list"></ul>
+                <div class="result-actions" id="result-actions"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ============ OPS VIEW ============ -->
+    <section id="view-ops" class="view" role="tabpanel" aria-labelledby="tab-ops">
+
+      <div class="ops-header">
+        <div>
+          <p class="eyebrow eyebrow-dark">Fraud ops</p>
+          <h1>Risk console</h1>
+          <p class="lede lede-dark">
+            Monitoring the same network the Pay app transacts on. Dataset is synthetic, modelled on
+            published UPI fraud patterns, built to make the precision/recall tradeoff tangible rather
+            than theoretical.
+          </p>
+        </div>
+        <div class="ops-header-stat">
+          <span class="ops-header-stat-num" id="stat-total-volume">--</span>
+          <span class="ops-header-stat-label">transactions monitored</span>
+        </div>
+      </div>
+
+      <div class="kpi-row" id="kpi-row"><!-- injected --></div>
+
+      <div class="threshold-panel">
+        <div class="threshold-head">
+          <div>
+            <h2>Risk threshold</h2>
+            <p>Drag this. Everything below recomputes live, because this tradeoff is the whole job.</p>
+          </div>
+          <span class="threshold-value" id="threshold-value">60</span>
+        </div>
+        <input type="range" min="0" max="100" value="60" id="threshold-slider" class="threshold-slider" />
+        <div class="threshold-scale">
+          <span>0 — approve almost everything</span>
+          <span>100 — block almost everything</span>
+        </div>
+        <p class="threshold-explainer" id="threshold-explainer"></p>
+      </div>
+
+      <div class="ops-grid">
+        <div class="panel trend-panel">
+          <h2>Flagged value, last 14 days</h2>
+          <div class="trend-chart" id="trend-chart"><!-- injected --></div>
+        </div>
+        <div class="panel mix-panel">
+          <h2>Why transactions get flagged</h2>
+          <div class="mix-list" id="reason-mix"><!-- injected --></div>
+        </div>
+      </div>
+
+      <div class="panel table-panel">
+        <div class="table-head">
+          <h2>Transaction feed</h2>
+          <div class="table-filters" id="table-filters">
+            <button class="filter-btn is-active" data-filter="all">All</button>
+            <button class="filter-btn" data-filter="flagged">Flagged only</button>
+            <button class="filter-btn" data-filter="live">Live, from Pay app</button>
+          </div>
+        </div>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>User</th>
+                <th>Payee</th>
+                <th>Amount</th>
+                <th>Risk score</th>
+                <th>Top reason</th>
+                <th>Decision</th>
+                <th>Confirmed</th>
+              </tr>
+            </thead>
+            <tbody id="txn-tbody"><!-- injected --></tbody>
+          </table>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <footer class="app-footer">
+    <p>Prototype built for a product management portfolio. All transactions, users and amounts are synthetic. No real payment data is involved.</p>
+    <button id="reset-demo" class="reset-link">Reset demo data</button>
+  </footer>
+
+</div>
+
+<script src="js/app.js"></script>
+</body>
+</html>
